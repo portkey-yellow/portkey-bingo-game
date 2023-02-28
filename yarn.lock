@@ -1391,12 +1391,12 @@
     "@portkey/utils" "^0.0.1-alpha.1.4"
     aelf-sdk "^3.2.44"
 
-"@portkey/did-ui-react@^0.0.1-alpha.1.8":
-  version "0.0.1-alpha.1.8"
-  resolved "https://registry.yarnpkg.com/@portkey/did-ui-react/-/did-ui-react-0.0.1-alpha.1.8.tgz#bda18b65227ee33818739a673dd2701e7e410103"
-  integrity sha512-Tqw32bomACa3da9V1DaaeGxz6jLsaG7Ayh6lf/I+oa86rEZITntUUk7bh1mWO6dJ0KntaBtXa7DdB5dIfWUFQg==
+"@portkey/did-ui-react@^0.0.1-alpha.1.9":
+  version "0.0.1-alpha.1.9"
+  resolved "https://registry.yarnpkg.com/@portkey/did-ui-react/-/did-ui-react-0.0.1-alpha.1.9.tgz#64887289c285f354ed2ad0ba116ff9add4f163b6"
+  integrity sha512-JoXleb8WETrPlRdEf2HZ1g0ydDtflS86K8UovoVS0jeMlcVFPhOsd5ugZba9VAR2ac566MawAriOZybngRDuQw==
   dependencies:
-    "@portkey/did" "^0.0.1-alpha.2.0"
+    "@portkey/did" "^0.0.1-alpha.2.1"
     aelf-sdk "^3.2.40"
     antd "4.24.4"
     antd-mobile "5.26.0"
@@ -1407,10 +1407,10 @@
     react-use "^17.4.0"
     uuid "^8.3.2"
 
-"@portkey/did@^0.0.1-alpha.2.0":
-  version "0.0.1-alpha.2.0"
-  resolved "https://registry.yarnpkg.com/@portkey/did/-/did-0.0.1-alpha.2.0.tgz#c80577756fda8e91e31ac36a534213b4dec92893"
-  integrity sha512-OBChTR/bHIXJmWLS9vyCyAz/nk7G2ivSq9nVNXZ5bk1eigGlIPIQdO30ZgArTfvZUMpqUBefIGMt5qT/UZ6LBQ==
+"@portkey/did@^0.0.1-alpha.2.1":
+  version "0.0.1-alpha.2.1"
+  resolved "https://registry.yarnpkg.com/@portkey/did/-/did-0.0.1-alpha.2.1.tgz#4eedc375c08c958bf019a94d2af20c4bf940fda8"
+  integrity sha512-er0HYy4ynekKAFZb+pLMZ/pO2/FONUcY9cazLuyiqDkOzCt+Xfoh5Wq044Ukllrorbsyqf++Or0FJdBlCWKVKA==
   dependencies:
     "@portkey/accounts" "^0.0.1-alpha.1.4"
     "@portkey/contracts" "^0.0.1-alpha.1.6"
