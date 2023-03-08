@@ -14,10 +14,10 @@ import { DIDWalletInfo } from "@portkey/did-ui-react/src/components/types";
 import { ChainInfo } from "@portkey/services";
 import { useLocalStorage } from "react-use";
 import { useDelay } from "hooks/common";
-
 const { sha256 } = AElf.utils;
-// const bingoAddress = "2AsEepqiFCRDnepVheYYN5LK7nvM2kUoXgk2zLKu1Zneh8fwmF";
+
 const bingoAddress = "2iNerrufZ7rQsj5Ea6Rpbi9G4GMNyTMNe9CBhBUocE9JHnUYJC";
+const CHAIN_ID = "tDVV";
 
 enum StepStatus {
   INIT,
@@ -36,8 +36,6 @@ const StepTextMap = {
   [StepStatus.PLAY]: "PLAY",
   [StepStatus.BINGO]: "BINGO",
 };
-
-const CHAIN_ID = "tDVV";
 
 export default function Home() {
   const caContractRef = useRef<ContractBasic>();
@@ -148,8 +146,9 @@ export default function Home() {
     });
 
     console.log("getBalance: result", result);
-    const difference = result.data.balance - Number(balanceValue);
-    setBalanceValue(result.data.balance);
+    const balance = result.data.balance / 10 ** 8;
+    const difference = balance - Number(balanceValue);
+    setBalanceValue(balance.toString());
     return difference;
   }, [balanceValue, delay]);
 
@@ -245,8 +244,8 @@ export default function Home() {
 
     const reg = /^[1-9]\d*$/;
     const value = parseInt(balanceInputValue, 10);
-    if (value < 2) {
-      return alert("A minimum bet of 2 ELFs!");
+    if (value < 1) {
+      return alert("A minimum bet of 1 ELFs!");
     }
     if (!reg.test(value.toString())) {
       alert("Please enter a positive integer greater than 0!");
@@ -269,14 +268,14 @@ export default function Home() {
           contractAddress: bingoAddress,
           methodName: "Play",
           args: {
-            value,
+            value: `${value * 10 ** 8}`,
           },
         }
       );
 
       console.log("Play result: ", playResult);
       txIdRef.current = playResult.data.TransactionId || "";
-      await delay(400);
+      await delay(4000);
       setStepStatus(StepStatus.BINGO);
     } catch (err) {
       console.log(err);
@@ -310,7 +309,7 @@ export default function Home() {
         }
       );
       console.log("Bingo: result", bingoResult);
-      const difference = await getBalance() + 32010000;
+      const difference = await getBalance();
       setStepStatus(StepStatus.PLAY);
       if (!difference) {
         alert("You got nothing");
@@ -400,19 +399,19 @@ export default function Home() {
                 type="button"
                 className={styles.button}
                 onClick={() => {
-                  setBalanceInputValue("3000");
+                  setBalanceInputValue("30");
                 }}
               >
-                3000
+                30
               </button>
               <button
                 type="button"
                 className={styles.button}
                 onClick={() => {
-                  setBalanceInputValue("5000");
+                  setBalanceInputValue("50");
                 }}
               >
-                5000
+                50
               </button>
               <button
                 type="button"
