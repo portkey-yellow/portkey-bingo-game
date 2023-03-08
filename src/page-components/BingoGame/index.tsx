@@ -1,47 +1,62 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import styles from "./styles.module.less";
 import AElf from "aelf-sdk";
 import { SignIn } from "@portkey/did-ui-react";
 import { did } from "@portkey/did-ui-react/src/utils/did";
 import { getContractBasic, ContractBasic } from "@portkey/contracts";
 import { DIDWalletInfo } from "@portkey/did-ui-react/src/components/types";
+import { ChainInfo } from "@portkey/services";
 import { useLocalStorage } from "react-use";
-import { RegisterStatus } from "types";
 import { useDelay } from "hooks/common";
-
+import { bingoAddress, CHAIN_ID } from "constants/network";
 const { sha256 } = AElf.utils;
-const bingoAddress = "2AsEepqiFCRDnepVheYYN5LK7nvM2kUoXgk2zLKu1Zneh8fwmF";
 
-const registerTextMap = {
-  [RegisterStatus.LOADING]: "Loading",
-  [RegisterStatus.WAIT]: "Please wait...",
-  [RegisterStatus.REGISTER]: "Register",
-  [RegisterStatus.APPROVE]: "Approve",
-  [RegisterStatus.LOGIN]: "Login",
+enum StepStatus {
+  INIT,
+  LOGIN,
+  REGISTER,
+  APPROVE,
+  PLAY,
+  BINGO,
+}
+
+const StepTextMap = {
+  [StepStatus.INIT]: "Please wait...",
+  [StepStatus.LOGIN]: "Login",
+  [StepStatus.REGISTER]: "Register",
+  [StepStatus.APPROVE]: "Approve",
+  [StepStatus.PLAY]: "PLAY",
+  [StepStatus.BINGO]: "BINGO",
 };
 
-const CHAIN_ID = "tDVV";
-
 export default function Home() {
+  const aelfRef = useRef<any>();
+  const chainInfoRef = useRef<ChainInfo>();
   const caContractRef = useRef<ContractBasic>();
   const multiTokenContractRef = useRef<ContractBasic>();
-  const loadingRef = useRef(false);
-  const txIdRef = useRef("");
-  const aelfRef = useRef<any>();
   const walletRef = useRef<DIDWalletInfo>();
+  const txIdRef = useRef("");
+
+  const loadingRef = useRef(false);
   const [isLoaderShow, setIsLoaderShow] = useState(false);
-  const [isSiteShow, setIsSiteShow] = useState(false);
-  const [isLoginShow, setIsLoginShow] = useState(true);
-  const [isPlayShow, setIsPlayShow] = useState(true);
-  const [isBingoShow, setIsBingoShow] = useState(false);
   const [balanceValue, setBalanceValue] = useState("loading...");
   const [balanceInputValue, setBalanceInputValue] = useState("");
-  const [open, setOpen] = useState<boolean>();
+  const [isSignInShow, setIsSignInShow] = useState<boolean>();
   const delay = useDelay();
   const [wallet, setWallet] = useLocalStorage<DIDWalletInfo | null>("wallet");
-  const [registerStatus, setRegisterStatus] = useState<RegisterStatus>(
-    RegisterStatus.WAIT
-  );
+  const [stepStatus, setStepStatus] = useState<StepStatus>(StepStatus.INIT);
+
+  const setLoading = useCallback((value: boolean) => {
+    loadingRef.current = value;
+    setIsLoaderShow(value);
+  }, []);
+
   const init = useCallback(async () => {
     const chainsInfo = await did.services.getChainsInfo();
     const chainInfo = chainsInfo.find((chain) => chain.chainId === CHAIN_ID);
@@ -49,13 +64,15 @@ export default function Home() {
       alert("chain is not running");
       return;
     }
+    chainInfoRef.current = chainInfo;
 
     const aelf = new AElf(new AElf.providers.HttpProvider(chainInfo.endPoint));
     aelfRef.current = aelf;
     if (!aelf.isConnected()) {
       alert("Blockchain Node is not running.");
+      return;
     }
-    setRegisterStatus(RegisterStatus.LOGIN);
+    setStepStatus(StepStatus.LOGIN);
   }, []);
 
   useEffect(() => {
@@ -69,154 +86,154 @@ export default function Home() {
           ),
         },
       } as any;
-      console.log(walletRef.current, "====walletRef.current");
     }
     init();
   }, []);
 
   const initContract = useCallback(async () => {
-    if (!walletRef.current) {
-      alert("Wallet is error");
-      return;
-    }
-    const chainsInfo = await did.services.getChainsInfo();
-    const chainInfo = chainsInfo.find((chain) => chain.chainId === CHAIN_ID);
-
-    if (!aelfRef.current || !chainInfo?.caContractAddress) return;
-
+    const chainInfo = chainInfoRef.current;
     const aelf = aelfRef.current;
     const wallet = walletRef.current;
-    caContractRef.current = await getContractBasic({
-      contractAddress: chainInfo?.caContractAddress,
-      account: wallet.walletInfo.wallet,
-      rpcUrl: chainInfo?.endPoint,
-    });
-    const chainStatus = await aelf.chain.getChainStatus();
-    const zeroC = await getContractBasic({
-      contractAddress: chainStatus.GenesisContractAddress,
-      account: wallet.walletInfo.wallet,
-      rpcUrl: chainInfo?.endPoint,
-    });
-    const tokenContractAddress = await zeroC.callViewMethod(
-      "GetContractAddressByName",
-      sha256("AElf.ContractNames.Token")
-    );
-    const multiTokenContract = await getContractBasic({
-      contractAddress: tokenContractAddress.data,
-      account: wallet.walletInfo.wallet,
-      rpcUrl: chainInfo?.endPoint,
-    });
-    multiTokenContractRef.current = multiTokenContract;
+    if (!aelfRef.current || !chainInfo || !wallet) return;
+    if (loadingRef.current) return;
+    setLoading(true);
 
-    await delay();
-    setRegisterStatus(RegisterStatus.REGISTER);
-    console.log("initContract");
-  }, [delay]);
+    try {
+      caContractRef.current = await getContractBasic({
+        contractAddress: chainInfo?.caContractAddress,
+        account: wallet.walletInfo.wallet,
+        rpcUrl: chainInfo?.endPoint,
+      });
+      const chainStatus = await aelf.chain.getChainStatus();
+      const zeroC = await getContractBasic({
+        contractAddress: chainStatus.GenesisContractAddress,
+        account: wallet.walletInfo.wallet,
+        rpcUrl: chainInfo?.endPoint,
+      });
+      const tokenContractAddress = await zeroC.callViewMethod(
+        "GetContractAddressByName",
+        sha256("AElf.ContractNames.Token")
+      );
+      const multiTokenContract = await getContractBasic({
+        contractAddress: tokenContractAddress.data,
+        account: wallet.walletInfo.wallet,
+        rpcUrl: chainInfo?.endPoint,
+      });
+      multiTokenContractRef.current = multiTokenContract;
+
+      await delay();
+      setStepStatus(StepStatus.REGISTER);
+      console.log("initContract");
+    } catch (error) {
+      console.log("initContract: error", error);
+    }
+
+    setLoading(false);
+  }, [delay, setLoading]);
 
   const getBalance = useCallback(async () => {
     const multiTokenContract = multiTokenContractRef.current;
     const wallet = walletRef.current;
-    if (!multiTokenContract || !wallet) return;
+    if (!multiTokenContract || !wallet) return 0;
 
     setBalanceValue("loading...");
     await delay();
     const result = await multiTokenContract.callViewMethod("GetBalance", {
-      symbol: "CARD",
+      symbol: "ELF",
       owner: wallet.caInfo.caAddress,
     });
-    // const aelfResult = await multiTokenContract.callViewMethod("GetBalance", {
-    //   symbol: "CARD",
-    //   owner: wallet.caInfo.caAddress,
-    // });
 
-    console.log("result: ", result);
-    // console.log("aelfResult: ", aelfResult);
-    const difference = result.data.balance - Number(balanceValue);
-    setBalanceValue(result.data.balance);
+    console.log("getBalance: result", result);
+    const balance = result.data.balance / 10 ** 8;
+    const difference = balance - Number(balanceValue);
+    setBalanceValue(balance.toString());
     return difference;
   }, [balanceValue, delay]);
 
   const register = useCallback(async () => {
     const caContract = caContractRef.current;
     const wallet = walletRef.current;
-    if (!wallet || !caContract) throw new Error("no wallet");
+    if (!wallet || !caContract) return;
+    if (loadingRef.current) return;
+    setLoading(true);
 
-    await caContract.callSendMethod(
-      "ManagerForwardCall",
-      wallet.walletInfo.wallet.address,
-      {
-        caHash: wallet.caInfo.caHash,
-        contractAddress: bingoAddress,
-        methodName: "Register",
-        args: null,
-      }
-    );
-    setRegisterStatus(RegisterStatus.LOADING);
-    await delay();
-    getBalance();
+    try {
+      const registerResult = await caContract.callSendMethod(
+        "ManagerForwardCall",
+        wallet.walletInfo.wallet.address,
+        {
+          caHash: wallet.caInfo.caHash,
+          contractAddress: bingoAddress,
+          methodName: "Register",
+          args: null,
+        }
+      );
+      console.log("register: result", registerResult);
+      await delay();
+      alert("Congratulations on your successful registration！Please approve");
+      setStepStatus(StepStatus.APPROVE);
+      getBalance();
+    } catch (error) {
+      console.log("register: error", error);
+    }
 
-    alert("Congratulations on your successful registration！Please approve");
-    setRegisterStatus(RegisterStatus.APPROVE);
-  }, [delay, getBalance]);
+    setLoading(false);
+  }, [delay, getBalance, setLoading]);
 
   const approve = useCallback(async () => {
     const wallet = walletRef.current;
     const caContract = caContractRef.current;
     const multiTokenContract = multiTokenContractRef.current;
 
-    if (!caContract || !wallet || !multiTokenContract)
-      throw new Error("no caContract or wallet or multiTokenContract");
-
-    setRegisterStatus(RegisterStatus.LOADING);
-    const approve = await caContract.callSendMethod(
-      "ManagerForwardCall",
-      wallet.walletInfo.wallet.address,
-      {
-        caHash: wallet.caInfo.caHash,
-        contractAddress: multiTokenContract.address,
-        methodName: "Approve",
-        args: {
-          symbol: "CARD",
-          spender: bingoAddress,
-          amount: "100000000000000000000",
-        },
-      }
-    );
-    console.log("approve", approve);
-
-    getBalance();
-    setRegisterStatus(RegisterStatus.APPROVE);
-    alert("Congratulations on your successful approve");
-    setIsSiteShow(true);
-    setIsLoginShow(false);
-  }, [delay, getBalance]);
-
-  const onLoginClick = useCallback(async () => {
-    if (registerStatus === RegisterStatus.LOGIN) {
-      if (walletRef.current) {
-        initContract();
-      } else {
-        setRegisterStatus(RegisterStatus.LOADING);
-        setOpen(true);
-      }
-      return;
-    }
-
+    if (!caContract || !wallet || !multiTokenContract) return;
     if (loadingRef.current) return;
-    loadingRef.current = true;
-    setIsLoaderShow(true);
+    setLoading(true);
+
     try {
-      if (registerStatus === RegisterStatus.REGISTER) {
-        await register();
-      } else {
-        await approve();
-      }
-    } catch (err) {
-      console.log(err);
+      const approve = await caContract.callSendMethod(
+        "ManagerForwardCall",
+        wallet.walletInfo.wallet.address,
+        {
+          caHash: wallet.caInfo.caHash,
+          contractAddress: multiTokenContract.address,
+          methodName: "Approve",
+          args: {
+            symbol: "ELF",
+            spender: bingoAddress,
+            amount: "100000000000000000000",
+          },
+        }
+      );
+      console.log("approve: result", approve);
+      getBalance();
+      alert("Congratulations on your successful approve");
+      setStepStatus(StepStatus.PLAY);
+    } catch (error) {
+      console.log("approve: error", error);
     }
-    loadingRef.current = false;
-    setIsLoaderShow(false);
-  }, [registerStatus, register, approve]);
+
+    setLoading(false);
+  }, [delay, getBalance, setLoading]);
+
+  const onRegisterClick = useCallback(async () => {
+    switch (stepStatus) {
+      case StepStatus.LOGIN:
+        if (walletRef.current) {
+          initContract();
+        } else {
+          setIsSignInShow(true);
+        }
+        break;
+      case StepStatus.REGISTER:
+        register();
+        break;
+      case StepStatus.APPROVE:
+        approve();
+        break;
+      default:
+        break;
+    }
+  }, [stepStatus, initContract, register, approve]);
 
   const onPlay = useCallback(async () => {
     const caContract = caContractRef.current;
@@ -225,51 +242,55 @@ export default function Home() {
 
     const reg = /^[1-9]\d*$/;
     const value = parseInt(balanceInputValue, 10);
-    if (value < 2) {
-      return alert("A minimum bet of 2 cards!");
+    if (value < 1) {
+      return alert("A minimum bet of 1 ELFs!");
     }
-
-    if (reg.test(value.toString()) && value <= Number(balanceValue)) {
-      setIsLoaderShow(true);
-      try {
-        const approve = await caContract.callSendMethod(
-          "ManagerForwardCall",
-          wallet.walletInfo.wallet.address,
-          {
-            caHash: wallet.caInfo.caHash,
-            contractAddress: bingoAddress,
-            methodName: "Play",
-            args: {
-              value,
-            },
-          }
-        );
-
-        console.log("Play result: ", approve);
-        setIsPlayShow(false);
-        txIdRef.current = approve.transactionId || "";
-        await delay(400);
-        setIsBingoShow(true);
-      } catch (err) {
-        setIsPlayShow(true);
-        setIsBingoShow(false);
-        console.log(err);
-      }
-      setIsLoaderShow(false);
-    } else if (value > Number(balanceValue)) {
-      alert("Please enter a number less than the number of cards you own!");
-    } else {
+    if (!reg.test(value.toString())) {
       alert("Please enter a positive integer greater than 0!");
+      return;
     }
-  }, [balanceInputValue, balanceValue, delay]);
+    if (value > Number(balanceValue)) {
+      alert("Please enter a number less than the number of ELFs you own!");
+      return;
+    }
+
+    if (loadingRef.current) return;
+    setLoading(true);
+
+    try {
+      const playResult = await caContract.callSendMethod(
+        "ManagerForwardCall",
+        wallet.walletInfo.wallet.address,
+        {
+          caHash: wallet.caInfo.caHash,
+          contractAddress: bingoAddress,
+          methodName: "Play",
+          args: {
+            value: `${value * 10 ** 8}`,
+          },
+        }
+      );
+
+      console.log("Play result: ", playResult);
+      txIdRef.current = playResult.data.TransactionId || "";
+      await delay(4000);
+      setStepStatus(StepStatus.BINGO);
+    } catch (err) {
+      console.log(err);
+    }
+    setLoading(false);
+  }, [balanceInputValue, balanceValue, delay, setLoading]);
 
   const onBingo = useCallback(async () => {
     const caContract = caContractRef.current;
     const wallet = walletRef.current;
-    if (!caContract || !wallet) return;
+    const txId = txIdRef.current;
+    if (!caContract || !wallet || !txId) return;
+    if (loadingRef.current) return;
+    setLoading(true);
+
     try {
-      const txId = txIdRef.current;
-      const approve = await caContract.callSendMethod(
+      const bingoResult = await caContract.callSendMethod(
         "ManagerForwardCall",
         wallet.walletInfo.wallet.address,
         {
@@ -279,22 +300,32 @@ export default function Home() {
           args: txId,
         }
       );
-      console.log("Bingo", approve);
-      // await bingoGameContract.Bingo(txId);
+      console.log("Bingo: result", bingoResult);
       const difference = await getBalance();
-      setIsPlayShow(true);
-      setIsBingoShow(false);
+      setStepStatus(StepStatus.PLAY);
       if (!difference) {
         alert("You got nothing");
       } else if (difference > 0) {
-        alert(`Congratulations！！ You got ${difference} card`);
+        alert(`Congratulations！！ You got ${difference} ELF`);
       } else if (difference < 0) {
-        alert(`It’s a pity. You lost ${-difference} card`);
+        alert(`It’s a pity. You lost ${-difference} ELF`);
       }
     } catch (err) {
       console.log(err);
     }
-  }, [getBalance]);
+    setLoading(false);
+  }, [getBalance, setLoading]);
+
+  const isLoginShow = useMemo(
+    () =>
+      [
+        StepStatus.INIT,
+        StepStatus.LOGIN,
+        StepStatus.REGISTER,
+        StepStatus.APPROVE,
+      ].includes(stepStatus),
+    [stepStatus]
+  );
 
   return (
     <>
@@ -306,9 +337,9 @@ export default function Home() {
               <button
                 className={styles.register}
                 type="button"
-                onClick={onLoginClick}
+                onClick={onRegisterClick}
               >
-                {registerTextMap[registerStatus]}
+                {isLoaderShow ? "Loading" : StepTextMap[stepStatus]}
               </button>
               <br />
               {wallet && (
@@ -327,10 +358,10 @@ export default function Home() {
           )}
         </div>
 
-        {isSiteShow && (
+        {!isLoginShow && (
           <div className={styles.siteBody}>
             <div className={styles.balance}>
-              Your CARD: <span>{balanceValue}</span> CARD （Refresh page to
+              Your ELF: <span>{balanceValue}</span> ELF （Refresh page to
               restart）
             </div>
             <div className={styles.inputBox}>
@@ -343,18 +374,10 @@ export default function Home() {
                   setBalanceInputValue(e.target.value);
                 }}
               />
-              <span
-                className={[styles.inputBorder, styles.bottom].join(" ")}
-              ></span>
-              <span
-                className={[styles.inputBorder, styles.right].join(" ")}
-              ></span>
-              <span
-                className={[styles.inputBorder, styles.top].join(" ")}
-              ></span>
-              <span
-                className={[styles.inputBorder, styles.left].join(" ")}
-              ></span>
+              <span className={[styles.inputBorder, styles.bottom].join(" ")} />
+              <span className={[styles.inputBorder, styles.right].join(" ")} />
+              <span className={[styles.inputBorder, styles.top].join(" ")} />
+              <span className={[styles.inputBorder, styles.left].join(" ")} />
               <button
                 type="button"
                 className={styles.button}
@@ -368,19 +391,19 @@ export default function Home() {
                 type="button"
                 className={styles.button}
                 onClick={() => {
-                  setBalanceInputValue("3000");
+                  setBalanceInputValue("30");
                 }}
               >
-                3000
+                30
               </button>
               <button
                 type="button"
                 className={styles.button}
                 onClick={() => {
-                  setBalanceInputValue("5000");
+                  setBalanceInputValue("50");
                 }}
               >
-                5000
+                50
               </button>
               <button
                 type="button"
@@ -404,14 +427,14 @@ export default function Home() {
               </button>
             </div>
             <div>
-              {isPlayShow && (
+              {stepStatus === StepStatus.PLAY && (
                 <button className={styles.play} type="button" onClick={onPlay}>
                   Play
                 </button>
               )}
             </div>
             <div>
-              {isBingoShow && (
+              {stepStatus === StepStatus.BINGO && (
                 <button className={styles.play} type="button" onClick={onBingo}>
                   Bingo
                 </button>
@@ -429,12 +452,11 @@ export default function Home() {
         )}
 
         <SignIn
-          open={open}
+          open={isSignInShow}
           sandboxId="portkey-ui-sandbox"
           chainId={CHAIN_ID}
           onFinish={(wallet) => {
-            setOpen(false);
-            console.log(wallet, "onFinish===");
+            setIsSignInShow(false);
             walletRef.current = wallet;
             setWallet(wallet);
             initContract();
@@ -443,8 +465,7 @@ export default function Home() {
             console.error(err, "onError==");
           }}
           onCancel={() => {
-            setOpen(false);
-            setRegisterStatus(RegisterStatus.LOGIN);
+            setIsSignInShow(false);
           }}
         />
       </div>
