@@ -14,10 +14,8 @@ import { DIDWalletInfo } from "@portkey/did-ui-react/src/components/types";
 import { ChainInfo } from "@portkey/services";
 import { useLocalStorage } from "react-use";
 import { useDelay } from "hooks/common";
+import { bingoAddress, CHAIN_ID } from "constants/network";
 const { sha256 } = AElf.utils;
-
-const bingoAddress = "2iNerrufZ7rQsj5Ea6Rpbi9G4GMNyTMNe9CBhBUocE9JHnUYJC";
-const CHAIN_ID = "tDVV";
 
 enum StepStatus {
   INIT,
@@ -38,13 +36,14 @@ const StepTextMap = {
 };
 
 export default function Home() {
+  const aelfRef = useRef<any>();
+  const chainInfoRef = useRef<ChainInfo>();
   const caContractRef = useRef<ContractBasic>();
   const multiTokenContractRef = useRef<ContractBasic>();
-  const loadingRef = useRef(false);
-  const txIdRef = useRef("");
-  const aelfRef = useRef<any>();
   const walletRef = useRef<DIDWalletInfo>();
-  const chainInfoRef = useRef<ChainInfo>();
+  const txIdRef = useRef("");
+
+  const loadingRef = useRef(false);
   const [isLoaderShow, setIsLoaderShow] = useState(false);
   const [balanceValue, setBalanceValue] = useState("loading...");
   const [balanceInputValue, setBalanceInputValue] = useState("");
@@ -87,7 +86,6 @@ export default function Home() {
           ),
         },
       } as any;
-      console.log(walletRef.current, "====walletRef.current");
     }
     init();
   }, []);
@@ -96,7 +94,7 @@ export default function Home() {
     const chainInfo = chainInfoRef.current;
     const aelf = aelfRef.current;
     const wallet = walletRef.current;
-    if (!aelfRef.current || !chainInfo?.caContractAddress || !wallet) return;
+    if (!aelfRef.current || !chainInfo || !wallet) return;
     if (loadingRef.current) return;
     setLoading(true);
 
@@ -291,12 +289,6 @@ export default function Home() {
     if (loadingRef.current) return;
     setLoading(true);
 
-    console.log("bingo: input", {
-      caHash: wallet.caInfo.caHash,
-      contractAddress: bingoAddress,
-      methodName: "Bingo",
-      args: txId,
-    });
     try {
       const bingoResult = await caContract.callSendMethod(
         "ManagerForwardCall",
@@ -347,7 +339,7 @@ export default function Home() {
                 type="button"
                 onClick={onRegisterClick}
               >
-                {StepTextMap[stepStatus]}
+                {isLoaderShow ? "Loading" : StepTextMap[stepStatus]}
               </button>
               <br />
               {wallet && (
@@ -465,7 +457,6 @@ export default function Home() {
           chainId={CHAIN_ID}
           onFinish={(wallet) => {
             setIsSignInShow(false);
-            console.log(wallet, "onFinish===");
             walletRef.current = wallet;
             setWallet(wallet);
             initContract();
