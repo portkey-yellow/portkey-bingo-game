@@ -1,20 +1,14 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import styles from "./styles.module.less";
-import AElf from "aelf-sdk";
-import { SignIn } from "@portkey/did-ui-react";
-import { did } from "@portkey/did-ui-react/src/utils/did";
-import { getContractBasic, ContractBasic } from "@portkey/contracts";
-import { DIDWalletInfo } from "@portkey/did-ui-react/src/components/types";
-import { ChainInfo } from "@portkey/services";
-import { useLocalStorage } from "react-use";
-import { useDelay } from "hooks/common";
-import { bingoAddress, CHAIN_ID } from "constants/network";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import styles from './styles.module.less';
+import AElf from 'aelf-sdk';
+import { SignIn } from '@portkey/did-ui-react';
+import { did } from '@portkey/did-ui-react/src/utils/did';
+import { getContractBasic, ContractBasic } from '@portkey/contracts';
+import { DIDWalletInfo } from '@portkey/did-ui-react/src/components/types';
+import { ChainInfo } from '@portkey/services';
+import { useLocalStorage } from 'react-use';
+import { useDelay } from 'hooks/common';
+import { bingoAddress, CHAIN_ID } from 'constants/network';
 const { sha256 } = AElf.utils;
 
 enum StepStatus {
@@ -27,12 +21,12 @@ enum StepStatus {
 }
 
 const StepTextMap = {
-  [StepStatus.INIT]: "Please wait...",
-  [StepStatus.LOGIN]: "Login",
-  [StepStatus.REGISTER]: "Register",
-  [StepStatus.APPROVE]: "Approve",
-  [StepStatus.PLAY]: "PLAY",
-  [StepStatus.BINGO]: "BINGO",
+  [StepStatus.INIT]: 'Please wait...',
+  [StepStatus.LOGIN]: 'Login',
+  [StepStatus.REGISTER]: 'Register',
+  [StepStatus.APPROVE]: 'Approve',
+  [StepStatus.PLAY]: 'PLAY',
+  [StepStatus.BINGO]: 'BINGO',
 };
 
 export default function Home() {
@@ -41,15 +35,15 @@ export default function Home() {
   const caContractRef = useRef<ContractBasic>();
   const multiTokenContractRef = useRef<ContractBasic>();
   const walletRef = useRef<DIDWalletInfo>();
-  const txIdRef = useRef("");
+  const txIdRef = useRef('');
 
   const loadingRef = useRef(false);
   const [isLoaderShow, setIsLoaderShow] = useState(false);
-  const [balanceValue, setBalanceValue] = useState("loading...");
-  const [balanceInputValue, setBalanceInputValue] = useState("");
+  const [balanceValue, setBalanceValue] = useState('loading...');
+  const [balanceInputValue, setBalanceInputValue] = useState('');
   const [isSignInShow, setIsSignInShow] = useState<boolean>();
   const delay = useDelay();
-  const [wallet, setWallet] = useLocalStorage<DIDWalletInfo | null>("wallet");
+  const [wallet, setWallet] = useLocalStorage<DIDWalletInfo | null>('wallet');
   const [stepStatus, setStepStatus] = useState<StepStatus>(StepStatus.INIT);
 
   const setLoading = useCallback((value: boolean) => {
@@ -61,7 +55,7 @@ export default function Home() {
     const chainsInfo = await did.services.getChainsInfo();
     const chainInfo = chainsInfo.find((chain) => chain.chainId === CHAIN_ID);
     if (!chainInfo) {
-      alert("chain is not running");
+      alert('chain is not running');
       return;
     }
     chainInfoRef.current = chainInfo;
@@ -69,7 +63,7 @@ export default function Home() {
     const aelf = new AElf(new AElf.providers.HttpProvider(chainInfo.endPoint));
     aelfRef.current = aelf;
     if (!aelf.isConnected()) {
-      alert("Blockchain Node is not running.");
+      alert('Blockchain Node is not running.');
       return;
     }
     setStepStatus(StepStatus.LOGIN);
@@ -81,9 +75,7 @@ export default function Home() {
         ...wallet,
         walletInfo: {
           ...wallet.walletInfo,
-          wallet: AElf.wallet.getWalletByPrivateKey(
-            wallet.walletInfo.privateKey
-          ),
+          wallet: AElf.wallet.getWalletByPrivateKey(wallet.walletInfo.privateKey),
         },
       } as any;
     }
@@ -111,8 +103,8 @@ export default function Home() {
         rpcUrl: chainInfo?.endPoint,
       });
       const tokenContractAddress = await zeroC.callViewMethod(
-        "GetContractAddressByName",
-        sha256("AElf.ContractNames.Token")
+        'GetContractAddressByName',
+        sha256('AElf.ContractNames.Token'),
       );
       const multiTokenContract = await getContractBasic({
         contractAddress: tokenContractAddress.data,
@@ -123,9 +115,9 @@ export default function Home() {
 
       await delay();
       setStepStatus(StepStatus.REGISTER);
-      console.log("initContract");
+      console.log('initContract');
     } catch (error) {
-      console.log("initContract: error", error);
+      console.log('initContract: error', error);
     }
 
     setLoading(false);
@@ -136,14 +128,14 @@ export default function Home() {
     const wallet = walletRef.current;
     if (!multiTokenContract || !wallet) return 0;
 
-    setBalanceValue("loading...");
+    setBalanceValue('loading...');
     await delay();
-    const result = await multiTokenContract.callViewMethod("GetBalance", {
-      symbol: "ELF",
+    const result = await multiTokenContract.callViewMethod('GetBalance', {
+      symbol: 'ELF',
       owner: wallet.caInfo.caAddress,
     });
 
-    console.log("getBalance: result", result);
+    console.log('getBalance: result', result);
     const balance = result.data.balance / 10 ** 8;
     const difference = balance - Number(balanceValue);
     setBalanceValue(balance.toString());
@@ -158,23 +150,19 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const registerResult = await caContract.callSendMethod(
-        "ManagerForwardCall",
-        wallet.walletInfo.wallet.address,
-        {
-          caHash: wallet.caInfo.caHash,
-          contractAddress: bingoAddress,
-          methodName: "Register",
-          args: null,
-        }
-      );
-      console.log("register: result", registerResult);
+      const registerResult = await caContract.callSendMethod('ManagerForwardCall', wallet.walletInfo.wallet.address, {
+        caHash: wallet.caInfo.caHash,
+        contractAddress: bingoAddress,
+        methodName: 'Register',
+        args: null,
+      });
+      console.log('register: result', registerResult);
       await delay();
-      alert("Congratulations on your successful registration！Please approve");
+      alert('Congratulations on your successful registration！Please approve');
       setStepStatus(StepStatus.APPROVE);
       getBalance();
     } catch (error) {
-      console.log("register: error", error);
+      console.log('register: error', error);
     }
 
     setLoading(false);
@@ -190,26 +178,22 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const approve = await caContract.callSendMethod(
-        "ManagerForwardCall",
-        wallet.walletInfo.wallet.address,
-        {
-          caHash: wallet.caInfo.caHash,
-          contractAddress: multiTokenContract.address,
-          methodName: "Approve",
-          args: {
-            symbol: "ELF",
-            spender: bingoAddress,
-            amount: "100000000000000000000",
-          },
-        }
-      );
-      console.log("approve: result", approve);
+      const approve = await caContract.callSendMethod('ManagerForwardCall', wallet.walletInfo.wallet.address, {
+        caHash: wallet.caInfo.caHash,
+        contractAddress: multiTokenContract.address,
+        methodName: 'Approve',
+        args: {
+          symbol: 'ELF',
+          spender: bingoAddress,
+          amount: '100000000000000000000',
+        },
+      });
+      console.log('approve: result', approve);
       getBalance();
-      alert("Congratulations on your successful approve");
+      alert('Congratulations on your successful approve');
       setStepStatus(StepStatus.PLAY);
     } catch (error) {
-      console.log("approve: error", error);
+      console.log('approve: error', error);
     }
 
     setLoading(false);
@@ -243,14 +227,14 @@ export default function Home() {
     const reg = /^[1-9]\d*$/;
     const value = parseInt(balanceInputValue, 10);
     if (value < 1) {
-      return alert("A minimum bet of 1 ELFs!");
+      return alert('A minimum bet of 1 ELFs!');
     }
     if (!reg.test(value.toString())) {
-      alert("Please enter a positive integer greater than 0!");
+      alert('Please enter a positive integer greater than 0!');
       return;
     }
     if (value > Number(balanceValue)) {
-      alert("Please enter a number less than the number of ELFs you own!");
+      alert('Please enter a number less than the number of ELFs you own!');
       return;
     }
 
@@ -258,21 +242,17 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const playResult = await caContract.callSendMethod(
-        "ManagerForwardCall",
-        wallet.walletInfo.wallet.address,
-        {
-          caHash: wallet.caInfo.caHash,
-          contractAddress: bingoAddress,
-          methodName: "Play",
-          args: {
-            value: `${value * 10 ** 8}`,
-          },
-        }
-      );
+      const playResult = await caContract.callSendMethod('ManagerForwardCall', wallet.walletInfo.wallet.address, {
+        caHash: wallet.caInfo.caHash,
+        contractAddress: bingoAddress,
+        methodName: 'Play',
+        args: {
+          value: `${value * 10 ** 8}`,
+        },
+      });
 
-      console.log("Play result: ", playResult);
-      txIdRef.current = playResult.data.TransactionId || "";
+      console.log('Play result: ', playResult);
+      txIdRef.current = playResult.data.TransactionId || '';
       await delay(4000);
       setStepStatus(StepStatus.BINGO);
     } catch (err) {
@@ -290,21 +270,17 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const bingoResult = await caContract.callSendMethod(
-        "ManagerForwardCall",
-        wallet.walletInfo.wallet.address,
-        {
-          caHash: wallet.caInfo.caHash,
-          contractAddress: bingoAddress,
-          methodName: "Bingo",
-          args: txId,
-        }
-      );
-      console.log("Bingo: result", bingoResult);
+      const bingoResult = await caContract.callSendMethod('ManagerForwardCall', wallet.walletInfo.wallet.address, {
+        caHash: wallet.caInfo.caHash,
+        contractAddress: bingoAddress,
+        methodName: 'Bingo',
+        args: txId,
+      });
+      console.log('Bingo: result', bingoResult);
       const difference = await getBalance();
       setStepStatus(StepStatus.PLAY);
       if (!difference) {
-        alert("You got nothing");
+        alert('You got nothing');
       } else if (difference > 0) {
         alert(`Congratulations！！ You got ${difference} ELF`);
       } else if (difference < 0) {
@@ -317,14 +293,8 @@ export default function Home() {
   }, [getBalance, setLoading]);
 
   const isLoginShow = useMemo(
-    () =>
-      [
-        StepStatus.INIT,
-        StepStatus.LOGIN,
-        StepStatus.REGISTER,
-        StepStatus.APPROVE,
-      ].includes(stepStatus),
-    [stepStatus]
+    () => [StepStatus.INIT, StepStatus.LOGIN, StepStatus.REGISTER, StepStatus.APPROVE].includes(stepStatus),
+    [stepStatus],
   );
 
   return (
@@ -334,12 +304,8 @@ export default function Home() {
           <div className={styles.siteTitle}>Bingo Game</div>
           {isLoginShow && (
             <>
-              <button
-                className={styles.register}
-                type="button"
-                onClick={onRegisterClick}
-              >
-                {isLoaderShow ? "Loading" : StepTextMap[stepStatus]}
+              <button className={styles.register} type="button" onClick={onRegisterClick}>
+                {isLoaderShow ? 'Loading' : StepTextMap[stepStatus]}
               </button>
               <br />
               {wallet && (
@@ -349,8 +315,7 @@ export default function Home() {
                   onClick={() => {
                     setWallet(null);
                     history.go(0);
-                  }}
-                >
+                  }}>
                   Logout
                 </button>
               )}
@@ -361,8 +326,7 @@ export default function Home() {
         {!isLoginShow && (
           <div className={styles.siteBody}>
             <div className={styles.balance}>
-              Your ELF: <span>{balanceValue}</span> ELF （Refresh page to
-              restart）
+              Your ELF: <span>{balanceValue}</span> ELF （Refresh page to restart）
             </div>
             <div className={styles.inputBox}>
               <input
@@ -374,15 +338,11 @@ export default function Home() {
                   setBalanceInputValue(e.target.value);
                 }}
               />
-              <span className={[styles.inputBorder, styles.bottom].join(" ")} />
-              <span className={[styles.inputBorder, styles.right].join(" ")} />
-              <span className={[styles.inputBorder, styles.top].join(" ")} />
-              <span className={[styles.inputBorder, styles.left].join(" ")} />
-              <button
-                type="button"
-                className={styles.button}
-                onClick={getBalance}
-              >
+              <span className={[styles.inputBorder, styles.bottom].join(' ')} />
+              <span className={[styles.inputBorder, styles.right].join(' ')} />
+              <span className={[styles.inputBorder, styles.top].join(' ')} />
+              <span className={[styles.inputBorder, styles.left].join(' ')} />
+              <button type="button" className={styles.button} onClick={getBalance}>
                 Get balance manually
               </button>
             </div>
@@ -391,29 +351,24 @@ export default function Home() {
                 type="button"
                 className={styles.button}
                 onClick={() => {
-                  setBalanceInputValue("30");
-                }}
-              >
+                  setBalanceInputValue('30');
+                }}>
                 30
               </button>
               <button
                 type="button"
                 className={styles.button}
                 onClick={() => {
-                  setBalanceInputValue("50");
-                }}
-              >
+                  setBalanceInputValue('50');
+                }}>
                 50
               </button>
               <button
                 type="button"
                 className={styles.button}
                 onClick={() => {
-                  setBalanceInputValue(
-                    `${parseInt((Number(balanceValue) / 2).toString(), 10)}`
-                  );
-                }}
-              >
+                  setBalanceInputValue(`${parseInt((Number(balanceValue) / 2).toString(), 10)}`);
+                }}>
                 Half
               </button>
               <button
@@ -421,8 +376,7 @@ export default function Home() {
                 className={styles.button}
                 onClick={() => {
                   setBalanceInputValue(`${parseInt(balanceValue, 10)}`);
-                }}
-              >
+                }}>
                 All-In
               </button>
             </div>
@@ -462,7 +416,7 @@ export default function Home() {
             initContract();
           }}
           onError={(err) => {
-            console.error(err, "onError==");
+            console.error(err, 'onError==');
           }}
           onCancel={() => {
             setIsSignInShow(false);
